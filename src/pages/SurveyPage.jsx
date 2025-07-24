@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CheckCircle, Clock, Users } from 'lucide-react';
+import { CheckCircle, Users } from 'lucide-react';
 import { getRoom, saveSurveyAnswers, subscribeToRoom } from '../utils/firebase';
 import { getSurveyByCategory } from '../data/surveyData';
 import useAppStore from '../store/useAppStore';
@@ -80,31 +80,7 @@ const SurveyPage = () => {
     }, 300); // 0.3초 지연으로 사용자가 선택을 확인할 수 있게 함
   };
 
-  const handleNextQuestion = () => {
-    if (!selectedAnswer) {
-      toast.error('답변을 선택해주세요.');
-      return;
-    }
 
-    // 답변 저장
-    setSurveyAnswer(currentQuestion.id, selectedAnswer);
-
-    if (isLastQuestion) {
-      handleSubmitSurvey();
-    } else {
-      setCurrentQuestionIndex(prev => prev + 1);
-      setSelectedAnswer('');
-    }
-  };
-
-  const handlePreviousQuestion = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
-      // 이전 답변 불러오기
-      const prevAnswer = survey.answers[surveyData[currentQuestionIndex - 1].id];
-      setSelectedAnswer(prevAnswer || '');
-    }
-  };
 
   const handleSubmitSurvey = async (finalAnswer = null) => {
     setIsSubmitting(true);
@@ -262,47 +238,17 @@ const SurveyPage = () => {
           </div>
         </div>
 
-        {/* 네비게이션 버튼 */}
-        <div className="flex justify-between">
-          <button
-            onClick={handlePreviousQuestion}
-            disabled={currentQuestionIndex === 0}
-            className="btn-secondary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ArrowLeft className="text-lg" />
-            이전
-          </button>
 
-          <button
-            onClick={handleNextQuestion}
-            disabled={!selectedAnswer || isSubmitting}
-            className="btn-primary flex items-center gap-2"
-          >
-            {isSubmitting ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                제출 중...
-              </>
-            ) : isLastQuestion ? (
-              <>
-                완료
-                <CheckCircle className="text-lg" />
-              </>
-            ) : (
-              <>
-                다음
-                <ArrowRight className="text-lg" />
-              </>
-            )}
-          </button>
-        </div>
 
         {/* 안내 메시지 */}
         <div className="mt-6 text-center">
           <p className="text-white/70 text-sm">
-            정답이 있는 것은 아니에요. 평소 자신의 성향에 맞게 선택해주세요.
+            답변을 선택하면 자동으로 다음 질문으로 넘어갑니다.
           </p>
           <p className="text-white/60 text-xs mt-2">
+            정답이 있는 것은 아니에요. 평소 자신의 성향에 맞게 선택해주세요.
+          </p>
+          <p className="text-white/60 text-xs mt-1">
             모든 참가자가 설문을 완료하면 궁합 분석 결과를 확인할 수 있습니다
           </p>
         </div>
