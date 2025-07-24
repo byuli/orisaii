@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Copy, Crown, Users, Play, UserPlus, Heart, Briefcase, ExternalLink } from 'lucide-react';
-import { getRoom, joinRoom, subscribeToRoom } from '../utils/firebase';
+import { getRoom, joinRoom, subscribeToRoom, updateRoomStatus } from '../utils/firebase';
 import useAppStore from '../store/useAppStore';
 import toast from 'react-hot-toast';
 
@@ -52,9 +52,9 @@ const RoomPage = () => {
         if (roomData) {
           setRoom(roomData);
           
-          // 퀴즈가 시작되면 퀴즈 페이지로 이동
-          if (roomData.status === 'quiz') {
-            navigate(`/quiz/${roomId}`);
+          // 설문이 시작되면 설문 페이지로 이동
+          if (roomData.status === 'survey') {
+            navigate(`/survey/${roomId}`);
           }
           // 모든 사람이 완료하면 결과 페이지로 이동
           else if (roomData.status === 'completed') {
@@ -97,9 +97,18 @@ const RoomPage = () => {
     toast.success('초대 URL이 복사되었습니다!');
   };
 
-  const handleStartQuiz = () => {
-    navigate(`/quiz/${roomId}`);
+  const handleStartSurvey = async () => {
+    try {
+      // 방 상태를 'survey'로 변경
+      await updateRoomStatus(roomId, 'survey');
+      navigate(`/survey/${roomId}`);
+    } catch (error) {
+      console.error('설문 시작 실패:', error);
+      toast.error('설문 시작에 실패했습니다.');
+    }
   };
+
+
 
   const getCategoryInfo = () => {
     if (room.category === 'romantic') {
@@ -144,6 +153,11 @@ const RoomPage = () => {
             <p className="text-gray-600">
               호스트: <span className="font-semibold">{room.hostNickname}</span>
             </p>
+            <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-700 text-center">
+                참여 후 모든 참가자가 모이면 성향 설문을 진행하게 됩니다
+              </p>
+            </div>
           </div>
 
           <form onSubmit={handleJoinRoom}>
@@ -216,13 +230,13 @@ const RoomPage = () => {
                   <Users className="text-xl" />
                   참가자 ({room.participants?.length || 0}/6)
                 </h2>
-                {room.participants?.length >= 2 && isHost && (
+{room.participants?.length >= 2 && isHost && (
                   <button
-                    onClick={handleStartQuiz}
+                    onClick={handleStartSurvey}
                     className="btn-primary flex items-center gap-2"
                   >
                     <Play className="text-lg" />
-                    퀴즈 시작
+                    설문 시작
                   </button>
                 )}
               </div>
@@ -250,10 +264,22 @@ const RoomPage = () => {
                 ))}
               </div>
 
-              {(room.participants?.length || 0) < 6 && (
+              {room.participants?.length >= 2 ? (
+                <div className="mt-4 p-4 bg-green-50 rounded-lg">
+                  <p className="text-sm text-green-700 text-center">
+{isHost ? (
+                      '🎉 참가자가 모였습니다! "설문 시작" 버튼을 눌러 궁합 분석을 시작하세요.'
+                    ) : (
+                      '🎉 참가자가 모였습니다! 방장이 설문을 시작하면 성향 분석이 진행됩니다.'
+                    )}
+                  </p>
+                </div>
+              ) : (
                 <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                   <p className="text-sm text-blue-700 text-center">
                     더 많은 친구들을 초대해보세요! 아래 초대 URL을 공유하세요.
+                    <br />
+                    <span className="text-xs text-blue-600">최소 2명부터 궁합 분석이 가능합니다.</span>
                   </p>
                 </div>
               )}
@@ -295,7 +321,7 @@ const RoomPage = () => {
                 </li>
                 <li className="flex items-start">
                   <span className="bg-primary-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs mr-2 mt-0.5">2</span>
-                  모두 함께 심리 테스트를 진행해요
+                  모두 함께 성향 설문을 진행해요
                 </li>
                 <li className="flex items-start">
                   <span className="bg-primary-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs mr-2 mt-0.5">3</span>
@@ -309,13 +335,15 @@ const RoomPage = () => {
               <div className="card">
                 <h3 className="text-lg font-bold text-gray-800 mb-4">알림</h3>
                 <p className="text-sm text-gray-600">
-                  방장이 퀴즈를 시작하면 자동으로 퀴즈 페이지로 이동됩니다.
+                  방장이 설문을 시작하면 자동으로 설문 페이지로 이동됩니다.
                 </p>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      
     </div>
   );
 };

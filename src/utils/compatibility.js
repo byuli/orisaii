@@ -62,7 +62,7 @@ export const analyzeGroupCompatibility = (participants, category, quizData) => {
   
   // 각 참가자의 성향 분석
   participants.forEach(participant => {
-    if (participant.quizCompleted && participant.answers) {
+    if ((participant.surveyCompleted || participant.quizCompleted) && participant.answers) {
       analysisResults.individuals[participant.nickname] = {
         nickname: participant.nickname,
         traits: analyzePersonality(participant.answers, quizData),
@@ -177,4 +177,6 @@ export const getTraitDescription = (trait, category) => {
   };
   
   return descriptions[category]?.[trait] || '특별한 성향을 가지고 있습니다.';
-}; 
+};
+
+ 

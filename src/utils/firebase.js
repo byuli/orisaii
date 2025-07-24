@@ -17,6 +17,7 @@ import {
   mockJoinRoom,
   mockSubscribeToRoom,
   mockSaveQuizAnswers,
+  mockSaveSurveyAnswers,
   mockSaveResults,
   mockGetResults
 } from './mockFirebase';
@@ -168,10 +169,15 @@ export const leaveRoom = async (roomId, nickname) => {
   }
 };
 
-// 퀴즈 답변 저장
+// 퀴즈 답변 저장 (기존 호환성)
 export const saveQuizAnswers = async (roomId, nickname, answers) => {
+  return await saveSurveyAnswers(roomId, nickname, answers);
+};
+
+// 설문 답변 저장
+export const saveSurveyAnswers = async (roomId, nickname, answers) => {
   if (!db) {
-    return await mockSaveQuizAnswers(roomId, nickname, answers);
+    return await mockSaveSurveyAnswers(roomId, nickname, answers);
   }
   
   try {
@@ -188,7 +194,8 @@ export const saveQuizAnswers = async (roomId, nickname, answers) => {
         return {
           ...participant,
           answers,
-          quizCompleted: true,
+          surveyCompleted: true,
+          quizCompleted: true, // 기존 호환성
           completedAt: new Date()
         };
       }
@@ -199,8 +206,8 @@ export const saveQuizAnswers = async (roomId, nickname, answers) => {
       participants: updatedParticipants
     });
     
-    // 모든 참가자가 퀴즈를 완료했는지 확인
-    const allCompleted = updatedParticipants.every(p => p.quizCompleted);
+    // 모든 참가자가 설문을 완료했는지 확인
+    const allCompleted = updatedParticipants.every(p => p.surveyCompleted || p.quizCompleted);
     if (allCompleted) {
       await updateDoc(roomRef, {
         status: 'completed'
@@ -209,8 +216,8 @@ export const saveQuizAnswers = async (roomId, nickname, answers) => {
     
     return true;
   } catch (error) {
-    console.error('퀴즈 답변 저장 실패, Mock 모드로 전환:', error);
-    return await mockSaveQuizAnswers(roomId, nickname, answers);
+    console.error('설문 답변 저장 실패, Mock 모드로 전환:', error);
+    return await mockSaveSurveyAnswers(roomId, nickname, answers);
   }
 };
 
@@ -271,5 +278,25 @@ export const getResults = async (roomId) => {
   } catch (error) {
     console.error('결과 가져오기 실패, Mock 모드로 전환:', error);
     return await mockGetResults(roomId);
+  }
+};
+
+// 방 상태 변경
+export const updateRoomStatus = async (roomId, status) => {
+  if (!db) {
+    console.warn('⚠️ Firestore가 비활성화됨. Mock 모드입니다.');
+    return true;
+  }
+  
+  try {
+    const roomRef = doc(db, 'rooms', roomId);
+    await updateDoc(roomRef, {
+      status: status
+    });
+    console.log(`✅ 방 상태 변경 완료: ${status}`);
+    return true;
+  } catch (error) {
+    console.error('방 상태 변경 실패:', error);
+    throw error;
   }
 }; 

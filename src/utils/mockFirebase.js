@@ -15,7 +15,8 @@ export const mockCreateRoom = async (category, hostNickname) => {
       nickname: hostNickname,
       isHost: true,
       joinedAt: now,
-      quizCompleted: false,
+      surveyCompleted: false,
+      quizCompleted: false, // 기존 호환성
       answers: {}
     }],
     status: 'waiting',
@@ -56,7 +57,8 @@ export const mockJoinRoom = async (roomId, nickname) => {
     nickname,
     isHost: false,
     joinedAt: new Date(),
-    quizCompleted: false,
+    surveyCompleted: false,
+    quizCompleted: false, // 기존 호환성
     answers: {}
   });
   
@@ -76,8 +78,8 @@ export const mockSubscribeToRoom = (roomId, callback) => {
   return () => clearInterval(interval);
 };
 
-// Mock 퀴즈 답변 저장
-export const mockSaveQuizAnswers = async (roomId, nickname, answers) => {
+// Mock 설문 답변 저장
+export const mockSaveSurveyAnswers = async (roomId, nickname, answers) => {
   const room = mockRooms[roomId];
   if (!room) {
     throw new Error('방을 찾을 수 없습니다.');
@@ -85,25 +87,29 @@ export const mockSaveQuizAnswers = async (roomId, nickname, answers) => {
   
   room.participants = room.participants.map(participant => {
     if (participant.nickname === nickname) {
-      return {
-        ...participant,
-        answers,
-        quizCompleted: true,
-        completedAt: new Date()
-      };
+              return {
+          ...participant,
+          answers,
+          surveyCompleted: true,
+          quizCompleted: true, // 기존 호환성
+          completedAt: new Date()
+        };
     }
     return participant;
   });
   
   // 모든 참가자가 완료했는지 확인
-  const allCompleted = room.participants.every(p => p.quizCompleted);
+      const allCompleted = room.participants.every(p => p.surveyCompleted || p.quizCompleted);
   if (allCompleted) {
     room.status = 'completed';
   }
   
-  console.log('🎯 Mock 퀴즈 답변 저장:', nickname);
+  console.log('🎯 Mock 설문 답변 저장:', nickname);
   return true;
 };
+
+// 기존 호환성을 위한 별칭
+export const mockSaveQuizAnswers = mockSaveSurveyAnswers;
 
 // Mock 결과 저장
 export const mockSaveResults = async (roomId, results) => {

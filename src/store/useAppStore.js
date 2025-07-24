@@ -14,12 +14,19 @@ const useAppStore = create((set, get) => ({
     category: '', // 'romantic' | 'workplace'
     hostNickname: '',
     participants: [],
-    status: 'waiting', // 'waiting' | 'quiz' | 'completed'
+    status: 'waiting', // 'waiting' | 'survey' | 'completed'
     createdAt: null,
   },
 
-  // 퀴즈 관련
+  // 퀴즈 관련 (기존 호환성)
   quiz: {
+    currentQuestion: 0,
+    answers: {},
+    isCompleted: false,
+  },
+
+  // 설문 관련
+  survey: {
     currentQuestion: 0,
     answers: {},
     isCompleted: false,
@@ -47,6 +54,24 @@ const useAppStore = create((set, get) => ({
     }
   })),
 
+  setSurveyAnswer: (questionId, answer) => set((state) => ({
+    survey: {
+      ...state.survey,
+      answers: {
+        ...state.survey.answers,
+        [questionId]: answer
+      }
+    },
+    // 기존 quiz 상태도 동기화
+    quiz: {
+      ...state.quiz,
+      answers: {
+        ...state.quiz.answers,
+        [questionId]: answer
+      }
+    }
+  })),
+
   nextQuestion: () => set((state) => ({
     quiz: {
       ...state.quiz,
@@ -55,6 +80,18 @@ const useAppStore = create((set, get) => ({
   })),
 
   completeQuiz: () => set((state) => ({
+    quiz: {
+      ...state.quiz,
+      isCompleted: true
+    }
+  })),
+
+  completeSurvey: () => set((state) => ({
+    survey: {
+      ...state.survey,
+      isCompleted: true
+    },
+    // 기존 quiz 상태도 동기화
     quiz: {
       ...state.quiz,
       isCompleted: true
@@ -79,6 +116,11 @@ const useAppStore = create((set, get) => ({
       createdAt: null,
     },
     quiz: {
+      currentQuestion: 0,
+      answers: {},
+      isCompleted: false,
+    },
+    survey: {
       currentQuestion: 0,
       answers: {},
       isCompleted: false,

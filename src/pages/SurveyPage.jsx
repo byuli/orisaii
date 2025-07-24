@@ -1,41 +1,41 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CheckCircle, Clock, Users } from 'lucide-react';
-import { getRoom, saveQuizAnswers, subscribeToRoom } from '../utils/firebase';
-import { getQuizByCategory } from '../data/quizData';
+import { getRoom, saveSurveyAnswers, subscribeToRoom } from '../utils/firebase';
+import { getSurveyByCategory } from '../data/surveyData';
 import useAppStore from '../store/useAppStore';
 import toast from 'react-hot-toast';
 
-const QuizPage = () => {
+const SurveyPage = () => {
   const { roomId } = useParams();
   const navigate = useNavigate();
-  const { user, room, quiz, setRoom, setQuizAnswer, nextQuestion, completeQuiz } = useAppStore();
+  const { user, room, survey, setRoom, setSurveyAnswer, nextQuestion, completeSurvey } = useAppStore();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [quizData, setQuizData] = useState([]);
+  const [surveyData, setSurveyData] = useState([]);
   const [startTime, setStartTime] = useState(Date.now());
 
   useEffect(() => {
-    const initializeQuiz = async () => {
+    const initializeSurvey = async () => {
       try {
         if (!room.id) {
           const roomData = await getRoom(roomId);
           setRoom(roomData);
-          const quiz = getQuizByCategory(roomData.category);
-          setQuizData(quiz);
+          const surveyQuestions = getSurveyByCategory(roomData.category);
+          setSurveyData(surveyQuestions);
         } else {
-          const quiz = getQuizByCategory(room.category);
-          setQuizData(quiz);
+          const surveyQuestions = getSurveyByCategory(room.category);
+          setSurveyData(surveyQuestions);
         }
         setStartTime(Date.now());
       } catch (error) {
-        toast.error('퀴즈를 불러올 수 없습니다.');
+        toast.error('설문을 불러올 수 없습니다.');
         navigate('/');
       }
     };
 
-    initializeQuiz();
+    initializeSurvey();
   }, [roomId, room.id, setRoom, navigate]);
 
   useEffect(() => {
@@ -57,11 +57,11 @@ const QuizPage = () => {
 
   // 현재 사용자의 답변 상태 확인
   const currentParticipant = room.participants?.find(p => p.nickname === user.nickname);
-  const hasCompletedQuiz = currentParticipant?.quizCompleted || false;
+  const hasSurveyCompleted = currentParticipant?.surveyCompleted || false;
 
-  const currentQuestion = quizData[currentQuestionIndex];
-  const isLastQuestion = currentQuestionIndex === quizData.length - 1;
-  const totalQuestions = quizData.length;
+  const currentQuestion = surveyData[currentQuestionIndex];
+  const isLastQuestion = currentQuestionIndex === surveyData.length - 1;
+  const totalQuestions = surveyData.length;
 
   const handleAnswerSelect = (answer) => {
     setSelectedAnswer(answer);
@@ -74,10 +74,10 @@ const QuizPage = () => {
     }
 
     // 답변 저장
-    setQuizAnswer(currentQuestion.id, selectedAnswer);
+    setSurveyAnswer(currentQuestion.id, selectedAnswer);
 
     if (isLastQuestion) {
-      handleSubmitQuiz();
+      handleSubmitSurvey();
     } else {
       setCurrentQuestionIndex(prev => prev + 1);
       setSelectedAnswer('');
@@ -88,22 +88,22 @@ const QuizPage = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(prev => prev - 1);
       // 이전 답변 불러오기
-      const prevAnswer = quiz.answers[quizData[currentQuestionIndex - 1].id];
+      const prevAnswer = survey.answers[surveyData[currentQuestionIndex - 1].id];
       setSelectedAnswer(prevAnswer || '');
     }
   };
 
-  const handleSubmitQuiz = async () => {
+  const handleSubmitSurvey = async () => {
     setIsSubmitting(true);
     try {
       const finalAnswers = {
-        ...quiz.answers,
+        ...survey.answers,
         [currentQuestion.id]: selectedAnswer
       };
 
-      await saveQuizAnswers(roomId, user.nickname, finalAnswers);
-      completeQuiz();
-      toast.success('퀴즈를 완료했습니다!');
+      await saveSurveyAnswers(roomId, user.nickname, finalAnswers);
+      completeSurvey();
+      toast.success('설문을 완료했습니다!');
       
       // 결과 대기 페이지로 이동하거나 현재 페이지에서 대기
       // navigate(`/result/${roomId}`);
@@ -117,13 +117,13 @@ const QuizPage = () => {
   if (!currentQuestion) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 flex items-center justify-center">
-        <div className="text-white text-xl">퀴즈를 불러오는 중...</div>
+        <div className="text-white text-xl">설문을 불러오는 중...</div>
       </div>
     );
   }
 
-  if (hasCompletedQuiz) {
-    const completedCount = room.participants?.filter(p => p.quizCompleted).length || 0;
+  if (hasSurveyCompleted) {
+    const completedCount = room.participants?.filter(p => p.surveyCompleted).length || 0;
     const totalCount = room.participants?.length || 0;
 
     return (
@@ -132,7 +132,7 @@ const QuizPage = () => {
           <div className="mb-6">
             <CheckCircle className="text-green-500 text-6xl mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-800 mb-2">
-              퀴즈 완료!
+              설문 완료!
             </h2>
             <p className="text-gray-600">
               모든 참가자가 완료할 때까지 기다려주세요.
@@ -171,7 +171,7 @@ const QuizPage = () => {
         {/* 헤더 */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">
-            {room.category === 'romantic' ? '연인 궁합' : '직장 동료 궁합'} 테스트
+            {room.category === 'romantic' ? '연인 궁합' : '직장 동료 궁합'} 설문
           </h1>
           <div className="text-white/80">
             {user.nickname}님의 차례
@@ -288,10 +288,13 @@ const QuizPage = () => {
           <p className="text-white/70 text-sm">
             정답이 있는 것은 아니에요. 평소 자신의 성향에 맞게 선택해주세요.
           </p>
+          <p className="text-white/60 text-xs mt-2">
+            모든 참가자가 설문을 완료하면 궁합 분석 결과를 확인할 수 있습니다
+          </p>
         </div>
       </div>
     </div>
   );
 };
 
-export default QuizPage; 
+export default SurveyPage; 

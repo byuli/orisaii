@@ -35,15 +35,15 @@ const ResultPage = () => {
         const roomData = await getRoom(roomId);
         setRoom(roomData);
 
-        // 모든 참가자가 퀴즈를 완료했는지 확인
-        const allCompleted = roomData.participants.every(p => p.quizCompleted);
+        // 모든 참가자가 설문을 완료했는지 확인
+        const allCompleted = roomData.participants.every(p => p.surveyCompleted || p.quizCompleted);
         if (!allCompleted) {
-          toast.error('아직 모든 참가자가 퀴즈를 완료하지 않았습니다.');
+          toast.error('아직 모든 참가자가 설문을 완료하지 않았습니다.');
           navigate(`/room/${roomId}`);
           return;
         }
 
-        // 퀴즈 데이터 가져오기
+        // 설문 데이터 가져오기
         const quizData = getQuizByCategory(roomData.category);
 
         // 궁합 분석 수행
@@ -365,17 +365,25 @@ const ResultPage = () => {
 
         {/* 하단 안내 */}
         <div className="card mt-8 text-center">
-          <h3 className="text-lg font-bold text-gray-800 mb-2">🎉 테스트 완료!</h3>
+          <h3 className="text-lg font-bold text-gray-800 mb-2">🎉 설문 완료!</h3>
           <p className="text-gray-600 mb-4">
             이 결과는 심리학적 성향을 바탕으로 한 재미있는 분석입니다.<br />
             실제 관계에서는 소통과 이해가 가장 중요하다는 것을 잊지 마세요!
           </p>
-          <button
-            onClick={() => navigate('/')}
-            className="btn-primary"
-          >
-            새로운 테스트 시작하기
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleShare}
+              className="btn-secondary flex-1"
+            >
+              결과 공유하기
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="btn-primary flex-1"
+            >
+              새로운 분석 시작하기
+            </button>
+          </div>
         </div>
       </div>
     </div>
