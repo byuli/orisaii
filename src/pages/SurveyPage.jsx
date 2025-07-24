@@ -65,6 +65,19 @@ const SurveyPage = () => {
 
   const handleAnswerSelect = (answer) => {
     setSelectedAnswer(answer);
+    
+    // 답변 저장
+    setSurveyAnswer(currentQuestion.id, answer);
+
+    // 자동으로 다음 질문으로 이동하거나 설문 완료
+    setTimeout(() => {
+      if (isLastQuestion) {
+        handleSubmitSurvey(answer);
+      } else {
+        setCurrentQuestionIndex(prev => prev + 1);
+        setSelectedAnswer('');
+      }
+    }, 300); // 0.3초 지연으로 사용자가 선택을 확인할 수 있게 함
   };
 
   const handleNextQuestion = () => {
@@ -93,12 +106,13 @@ const SurveyPage = () => {
     }
   };
 
-  const handleSubmitSurvey = async () => {
+  const handleSubmitSurvey = async (finalAnswer = null) => {
     setIsSubmitting(true);
     try {
+      const answerToUse = finalAnswer || selectedAnswer;
       const finalAnswers = {
         ...survey.answers,
-        [currentQuestion.id]: selectedAnswer
+        [currentQuestion.id]: answerToUse
       };
 
       await saveSurveyAnswers(roomId, user.nickname, finalAnswers);
