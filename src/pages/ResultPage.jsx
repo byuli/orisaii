@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Share2, Download, Home, Heart, Users, Star, AlertTriangle, Trophy, Crown } from 'lucide-react';
+import { Share2, Download, Home, Heart, Users, Star, AlertTriangle, Trophy, Crown, BarChart3, Target, Lightbulb } from 'lucide-react';
 import { getRoom, getResults, saveResults } from '../utils/firebase';
-import { analyzeGroupCompatibility, getTraitDescription } from '../utils/compatibility';
+import { analyzeGroupCompatibility, getTraitDescription, getCategoryName } from '../utils/compatibility';
 import { getQuizByCategory } from '../data/quizData';
 import useAppStore from '../store/useAppStore';
 import toast from 'react-hot-toast';
@@ -13,7 +13,7 @@ const ResultPage = () => {
   const { room, setRoom, setResults } = useAppStore();
   const [analysis, setAnalysis] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedView, setSelectedView] = useState('overview'); // 'overview', 'pairs', 'individuals'
+  const [selectedView, setSelectedView] = useState('overview'); // 'overview', 'pairs', 'individuals', 'insights'
 
   useEffect(() => {
     const initializeResults = async () => {
@@ -148,7 +148,8 @@ const ResultPage = () => {
             {[
               { key: 'overview', label: '전체 요약', icon: Star },
               { key: 'pairs', label: '상세 궁합', icon: Heart },
-              { key: 'individuals', label: '개인 성향', icon: Users }
+              { key: 'individuals', label: '개인 성향', icon: Users },
+              { key: 'insights', label: '심층 분석', icon: BarChart3 }
             ].map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
@@ -186,13 +187,13 @@ const ResultPage = () => {
                   <div className="text-3xl font-bold text-green-600">
                     {analysis.groupStats.mostCompatibleGroup.length}
                   </div>
-                  <div className="text-gray-600">높은 궁합 조합</div>
+                  <div className="text-gray-600">환상의 조합</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-red-600">
+                  <div className="text-3xl font-bold text-orange-600">
                     {analysis.groupStats.potentialConflicts.length}
                   </div>
-                  <div className="text-gray-600">주의 필요 조합</div>
+                  <div className="text-gray-600">개선 필요 조합</div>
                 </div>
               </div>
 
@@ -228,7 +229,7 @@ const ResultPage = () => {
               )}
             </div>
 
-            {/* 높은 궁합 조합들 */}
+            {/* 환상의 조합들 */}
             {analysis.groupStats.mostCompatibleGroup.length > 0 && (
               <div className="card">
                 <h3 className="text-xl font-bold text-gray-800 mb-4">환상의 조합 ✨</h3>
@@ -246,6 +247,27 @@ const ResultPage = () => {
                       <div className="text-right">
                         <div className="font-bold text-green-600">{pair.percentage}%</div>
                         <div className="text-sm text-green-700">{pair.level.text}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 그룹 성향 요약 */}
+            {analysis.groupStats.traitDistribution && (
+              <div className="card">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">그룹 성향 특징</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {analysis.groupStats.traitDistribution.slice(0, 6).map((trait, index) => (
+                    <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="w-8 h-8 bg-primary-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                        {trait.count}
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm text-gray-600">
+                          {trait.description}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -296,7 +318,7 @@ const ResultPage = () => {
                         <div>
                           <div className="font-medium text-gray-700 mb-1">{pair.person1}의 주요 성향</div>
                           <div className="space-y-1">
-                            {analysis.individuals[pair.person1]?.traits.slice(0, 2).map((trait, i) => (
+                            {analysis.individuals[pair.person1]?.traits.slice(0, 3).map((trait, i) => (
                               <div key={i} className="text-gray-600">
                                 • {getTraitDescription(trait.trait, room.category)}
                               </div>
@@ -306,7 +328,7 @@ const ResultPage = () => {
                         <div>
                           <div className="font-medium text-gray-700 mb-1">{pair.person2}의 주요 성향</div>
                           <div className="space-y-1">
-                            {analysis.individuals[pair.person2]?.traits.slice(0, 2).map((trait, i) => (
+                            {analysis.individuals[pair.person2]?.traits.slice(0, 3).map((trait, i) => (
                               <div key={i} className="text-gray-600">
                                 • {getTraitDescription(trait.trait, room.category)}
                               </div>
@@ -314,6 +336,45 @@ const ResultPage = () => {
                           </div>
                         </div>
                       </div>
+
+                      {/* 상세 분석 정보 */}
+                      {pair.detailed && (
+                        <div className="mt-4 pt-4 border-t">
+                          {/* 강점 */}
+                          {pair.detailed.strengths?.length > 0 && (
+                            <div className="mb-3">
+                              <div className="text-sm font-medium text-green-700 mb-1">✨ 강점</div>
+                              <div className="text-sm text-green-600">
+                                {pair.detailed.strengths.slice(0, 2).map((strength, i) => (
+                                  <div key={i}>• {strength.description}</div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* 도전과제 */}
+                          {pair.detailed.challenges?.length > 0 && (
+                            <div className="mb-3">
+                              <div className="text-sm font-medium text-orange-700 mb-1">🤔 개선점</div>
+                              <div className="text-sm text-orange-600">
+                                {pair.detailed.challenges.slice(0, 2).map((challenge, i) => (
+                                  <div key={i}>• {challenge.description}</div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* 추천사항 */}
+                          {pair.detailed.recommendations?.length > 0 && (
+                            <div>
+                              <div className="text-sm font-medium text-blue-700 mb-1">💡 추천</div>
+                              <div className="text-sm text-blue-600">
+                                {pair.detailed.recommendations[0]}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
               </div>
@@ -350,6 +411,9 @@ const ResultPage = () => {
                           {i + 1}
                         </div>
                         <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-700 mb-1">
+                            {getCategoryName(trait.category)}
+                          </div>
                           <div className="text-sm text-gray-600">
                             {getTraitDescription(trait.trait, room.category)}
                           </div>
@@ -357,8 +421,163 @@ const ResultPage = () => {
                       </div>
                     ))}
                   </div>
+
+                  {/* 성향 카테고리 분포 */}
+                  {person.categories && (
+                    <div className="mt-4 pt-4 border-t">
+                      <h4 className="font-semibold text-gray-700 mb-2">성향 분포</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {Object.entries(person.categories).map(([category, traits]) => {
+                          const totalCount = Object.values(traits).reduce((sum, count) => sum + count, 0);
+                          return (
+                            <div key={category} className="text-xs">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">{getCategoryName(category)}</span>
+                                <span className="font-medium">{totalCount}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* 심층 분석 (새로운 탭) */}
+        {selectedView === 'insights' && (
+          <div className="space-y-6">
+            {/* 그룹 성향 분포 상세 */}
+            <div className="card">
+              <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <Target className="text-primary-600" />
+                그룹 성향 분포 분석
+              </h2>
+              
+              {analysis.groupStats.traitDistribution && (
+                <div className="space-y-4">
+                  <div className="text-gray-600 mb-4">
+                    그룹 전체에서 나타나는 주요 성향들을 분석한 결과입니다.
+                  </div>
+                  
+                  {analysis.groupStats.traitDistribution.map((trait, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-primary-500 text-white rounded-full flex items-center justify-center font-bold">
+                          {trait.count}
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-800 mb-1">
+                            {trait.description}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {trait.count}명이 이런 성향을 보입니다
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-primary-600">
+                          {Math.round((trait.count / Object.keys(analysis.individuals).length) * 100)}%
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 궁합 분포 차트 */}
+            <div className="card">
+              <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <BarChart3 className="text-blue-600" />
+                궁합 점수 분포
+              </h3>
+              
+              <div className="space-y-3">
+                {[
+                  { range: '90-100%', label: '완벽한 궁합', color: 'bg-green-500', count: Object.values(analysis.pairCompatibility).filter(p => p.percentage >= 90).length },
+                  { range: '80-89%', label: '환상의 조합', color: 'bg-green-400', count: Object.values(analysis.pairCompatibility).filter(p => p.percentage >= 80 && p.percentage < 90).length },
+                  { range: '70-79%', label: '좋은 궁합', color: 'bg-blue-500', count: Object.values(analysis.pairCompatibility).filter(p => p.percentage >= 70 && p.percentage < 80).length },
+                  { range: '60-69%', label: '괜찮은 궁합', color: 'bg-yellow-500', count: Object.values(analysis.pairCompatibility).filter(p => p.percentage >= 60 && p.percentage < 70).length },
+                  { range: '50-59%', label: '평범한 궁합', color: 'bg-gray-500', count: Object.values(analysis.pairCompatibility).filter(p => p.percentage >= 50 && p.percentage < 60).length },
+                  { range: '40-49%', label: '노력 필요', color: 'bg-orange-500', count: Object.values(analysis.pairCompatibility).filter(p => p.percentage >= 40 && p.percentage < 50).length },
+                  { range: '0-39%', label: '상당한 차이', color: 'bg-red-500', count: Object.values(analysis.pairCompatibility).filter(p => p.percentage < 40).length }
+                ].map((item, index) => (
+                  <div key={index} className="flex items-center gap-4">
+                    <div className="w-20 text-sm text-gray-600">{item.range}</div>
+                    <div className="flex-1 bg-gray-200 rounded-full h-6 relative">
+                      <div 
+                        className={`${item.color} h-6 rounded-full flex items-center justify-center text-white text-sm font-medium`}
+                        style={{ width: `${Math.max((item.count / Object.values(analysis.pairCompatibility).length) * 100, item.count > 0 ? 10 : 0)}%` }}
+                      >
+                        {item.count > 0 && item.count}
+                      </div>
+                    </div>
+                    <div className="w-24 text-sm text-gray-600">{item.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 개선 제안 */}
+            <div className="card">
+              <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <Lightbulb className="text-yellow-600" />
+                그룹 개선 제안
+              </h3>
+              
+              <div className="space-y-4">
+                {analysis.groupStats.averageCompatibility >= 80 && (
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <div className="font-medium text-green-800 mb-2">🎉 환상적인 팀워크!</div>
+                    <div className="text-green-700 text-sm">
+                      그룹 전체의 궁합이 매우 좋습니다. 서로의 강점을 더욱 살려 시너지를 극대화해보세요.
+                    </div>
+                  </div>
+                )}
+                
+                {analysis.groupStats.averageCompatibility >= 60 && analysis.groupStats.averageCompatibility < 80 && (
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <div className="font-medium text-blue-800 mb-2">👍 좋은 균형감</div>
+                    <div className="text-blue-700 text-sm">
+                      전반적으로 좋은 궁합을 보이고 있습니다. 서로 다른 성향을 이해하고 존중하면 더욱 발전할 수 있어요.
+                    </div>
+                  </div>
+                )}
+                
+                {analysis.groupStats.averageCompatibility < 60 && (
+                  <div className="p-4 bg-orange-50 rounded-lg">
+                    <div className="font-medium text-orange-800 mb-2">💪 소통이 핵심</div>
+                    <div className="text-orange-700 text-sm">
+                      서로 다른 성향을 가진 멤버들이 많습니다. 적극적인 소통과 상호 이해를 통해 더 좋은 관계를 만들어보세요.
+                    </div>
+                  </div>
+                )}
+
+                {/* 구체적 제안사항 */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  {analysis.groupStats.mostCompatibleGroup.length > 0 && (
+                    <div className="p-3 bg-green-50 rounded-lg">
+                      <div className="font-medium text-green-800 text-sm mb-1">💡 협업 추천</div>
+                      <div className="text-green-700 text-xs">
+                        높은 궁합을 보이는 조합들을 중심으로 프로젝트나 활동을 진행해보세요.
+                      </div>
+                    </div>
+                  )}
+                  
+                  {analysis.groupStats.potentialConflicts.length > 0 && (
+                    <div className="p-3 bg-orange-50 rounded-lg">
+                      <div className="font-medium text-orange-800 text-sm mb-1">🤝 소통 강화</div>
+                      <div className="text-orange-700 text-xs">
+                        성향 차이가 큰 조합들은 더 많은 대화와 이해의 시간이 필요해요.
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -367,8 +586,8 @@ const ResultPage = () => {
         <div className="card mt-8 text-center">
           <h3 className="text-lg font-bold text-gray-800 mb-2">🎉 설문 완료!</h3>
           <p className="text-gray-600 mb-4">
-            이 결과는 심리학적 성향을 바탕으로 한 재미있는 분석입니다.<br />
-            실제 관계에서는 소통과 이해가 가장 중요하다는 것을 잊지 마세요!
+            이 결과는 총 {Object.values(analysis.individuals).length}명이 참여한 {Object.keys(analysis.pairCompatibility).length}개 조합을 분석한 결과입니다.<br />
+            심리학적 성향을 바탕으로 한 재미있는 분석이니, 실제 관계에서는 소통과 이해가 가장 중요하다는 것을 잊지 마세요!
           </p>
           <div className="flex gap-3">
             <button
