@@ -19,7 +19,9 @@ import {
   mockSaveQuizAnswers,
   mockSaveSurveyAnswers,
   mockSaveResults,
-  mockGetResults
+  mockGetResults,
+  mockSendChatMessage,
+  mockSubscribeToChatMessages
 } from './mockFirebase';
 
 // 고유한 방 ID 생성
@@ -298,5 +300,82 @@ export const updateRoomStatus = async (roomId, status) => {
   } catch (error) {
     console.error('방 상태 변경 실패:', error);
     throw error;
+  }
+};
+
+// 채팅 메시지 전송
+export const sendChatMessage = async (roomId, nickname, message) => {
+  if (!db) {
+    console.warn('⚠️ Firestore가 비활성화됨. Mock 모드입니다.');
+    return await mockSendChatMessage(roomId, nickname, message);
+  }
+  
+  try {
+    const messagesRef = collection(db, 'rooms', roomId, 'messages');
+    await addDoc(messagesRef, {
+      nickname,
+      message: message.trim(),
+      timestamp: serverTimestamp(),
+      createdAt: new Date() // 클라이언트 측 시간도 저장
+    });
+    console.log('✅ 채팅 메시지 전송 완료');
+    return true;
+  } catch (error) {
+    console.error('채팅 메시지 전송 실패, Mock 모드로 전환:', error);
+    return await mockSendChatMessage(roomId, nickname, message);
+  }
+};
+
+// 채팅 메시지 실시간 구독
+export const subscribeToChatMessages = (roomId, callback) => {
+  if (!db) {
+    console.warn('⚠️ Firestore가 비활성화됨. Mock 모드입니다.');
+    return mockSubscribeToChatMessages(roomId, callback);
+  }
+  
+  try {
+    const messagesRef = collection(db, 'rooms', roomId, 'messages');
+    
+    // 메시지를 시간순으로 정렬하여 구독
+    return onSnapshot(messagesRef, (snapshot) => {
+      const messages = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        let displayTime;
+        
+        // 안전한 시간 처리
+        if (data.timestamp && data.timestamp.toDate) {
+          // Firestore Timestamp 객체인 경우
+          displayTime = data.timestamp.toDate();
+        } else if (data.createdAt && data.createdAt instanceof Date) {
+          // 이미 Date 객체인 경우
+          displayTime = data.createdAt;
+        } else if (data.createdAt) {
+          // 문자열이나 다른 형태인 경우 Date로 변환 시도
+          displayTime = new Date(data.createdAt);
+        } else {
+          // 모든 것이 실패하면 현재 시간 사용
+          displayTime = new Date();
+        }
+        
+        messages.push({
+          id: doc.id,
+          ...data,
+          displayTime
+        });
+      });
+      
+      // 시간순으로 정렬
+      messages.sort((a, b) => {
+        const timeA = a.displayTime || new Date(0);
+        const timeB = b.displayTime || new Date(0);
+        return timeA - timeB;
+      });
+      
+      callback(messages);
+    });
+  } catch (error) {
+    console.error('채팅 메시지 구독 실패, Mock 모드로 전환:', error);
+    return mockSubscribeToChatMessages(roomId, callback);
   }
 }; 

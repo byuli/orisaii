@@ -1,6 +1,42 @@
 // Mock Firebase 함수들 (개발/테스트용)
-let mockRooms = {};
+let mockRooms = {
+  // 테스트용 기본 방들
+  'test-romantic': {
+    id: 'test-romantic',
+    category: 'romantic',
+    hostNickname: '테스트호스트',
+    participants: [{
+      nickname: '테스트호스트',
+      isHost: true,
+      joinedAt: new Date(),
+      surveyCompleted: false,
+      quizCompleted: false,
+      answers: {}
+    }],
+    status: 'waiting',
+    createdAt: new Date(),
+    maxParticipants: 6
+  },
+  'test-workplace': {
+    id: 'test-workplace',
+    category: 'workplace',
+    hostNickname: '테스트호스트',
+    participants: [{
+      nickname: '테스트호스트',
+      isHost: true,
+      joinedAt: new Date(),
+      surveyCompleted: false,
+      quizCompleted: false,
+      answers: {}
+    }],
+    status: 'waiting',
+    createdAt: new Date(),
+    maxParticipants: 6
+  }
+};
 let mockResults = {};
+let mockMessages = {}; // 각 방의 채팅 메시지 저장
+let chatSubscribers = {}; // 채팅 구독자들 저장
 
 // Mock 방 생성
 export const mockCreateRoom = async (category, hostNickname) => {
@@ -129,4 +165,60 @@ export const mockGetResults = async (roomId) => {
     throw new Error('결과를 찾을 수 없습니다.');
   }
   return result;
+};
+
+// Mock 채팅 메시지 전송
+export const mockSendChatMessage = async (roomId, nickname, message) => {
+  if (!mockMessages[roomId]) {
+    mockMessages[roomId] = [];
+  }
+  
+  const now = new Date();
+  const chatMessage = {
+    id: Date.now().toString() + Math.random(),
+    nickname,
+    message: message.trim(),
+    displayTime: now,
+    createdAt: now,
+    timestamp: now // Firebase 호환성을 위해 추가
+  };
+  
+  mockMessages[roomId].push(chatMessage);
+  
+  // 구독자들에게 알림
+  if (chatSubscribers[roomId]) {
+    chatSubscribers[roomId].forEach(callback => {
+      callback([...mockMessages[roomId]]);
+    });
+  }
+  
+  console.log('🎯 Mock 채팅 메시지 전송:', nickname, message);
+  return true;
+};
+
+// Mock 채팅 메시지 실시간 구독
+export const mockSubscribeToChatMessages = (roomId, callback) => {
+  if (!mockMessages[roomId]) {
+    mockMessages[roomId] = [];
+  }
+  
+  if (!chatSubscribers[roomId]) {
+    chatSubscribers[roomId] = [];
+  }
+  
+  // 구독자 추가
+  chatSubscribers[roomId].push(callback);
+  
+  // 즉시 현재 메시지들 전달
+  callback([...mockMessages[roomId]]);
+  
+  // unsubscribe 함수 반환
+  return () => {
+    if (chatSubscribers[roomId]) {
+      const index = chatSubscribers[roomId].indexOf(callback);
+      if (index > -1) {
+        chatSubscribers[roomId].splice(index, 1);
+      }
+    }
+  };
 }; 
